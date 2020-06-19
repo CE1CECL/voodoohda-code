@@ -424,6 +424,9 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 {
 	bool result = false;
 	UInt16 config, vendorId;
+  UInt32 gCtl;
+  UInt16 msiCtl;
+  
 //moved here from init ----------
   mMsgBufferEnabled = false;
 	mMsgBufferSize = MSG_BUFFER_SIZE;
@@ -498,13 +501,16 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 	}
 	disablePCIeNoSnoop(vendorId);
 	if (vendorId == NVIDIA_VENDORID &&
-		!OSDynamicCast(OSBoolean, getProperty(kVoodooHDAAllowMSI)))
+      !OSDynamicCast(OSBoolean, getProperty(kVoodooHDAAllowMSI))) {
 		/*
 		 * Disable MSI for NVIDIA controller if not in Info.plist.
 		 *   Known to have problems with MSI (Quirk from HDAC)
 		 */
 		mAllowMSI = false;
-
+  }
+  msiCtl = mPciNub->configRead16(0x62);
+  logMsg("MSI_CTL=0x%04x\n", msiCtl);
+  
 	if (!getCapabilities()) {
 		errorMsg("error: getCapabilities failed\n");
 		goto done;
@@ -541,8 +547,10 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 // logMsg("Starting RIRB Engine...\n");
 	startRirb();
 
-//	logMsg("Enabling controller interrupt...\n");
-	writeData32(HDAC_GCTL, readData32(HDAC_GCTL) | HDAC_GCTL_UNSOL);
+	logMsg("Enabling controller interrupt...\n");
+  gCtl = readData32(HDAC_GCTL);
+  logMsg("HDAC_CTL=0x%04x\n", gCtl);
+	writeData32(HDAC_GCTL, gCtl | HDAC_GCTL_UNSOL);
 	writeData32(HDAC_INTCTL, HDAC_INTCTL_CIE | HDAC_INTCTL_GIE);
 	IODelay(1000);
 
