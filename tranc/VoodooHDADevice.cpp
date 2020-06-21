@@ -405,6 +405,8 @@ void VoodooHDADevice::disablePCIeNoSnoop(UInt16 vendorId)
 				mPciNub->configWrite16( INTEL_SCH_HDA_DEVC,	snoop16 & (~INTEL_SCH_HDA_DEVC_NOSNOOP));
 			}
 			break;
+		case AMD_VENDORID:
+			/* FALL THROUGH */
 		case ATI_VENDORID:
 			snoop8 = mPciNub->configRead8(0x42U);
 			if (!(snoop8 & 2U)) {
@@ -2001,42 +2003,42 @@ void VoodooHDADevice::handleInterrupt()
 
 	mTotalInt++;
 	status = OSBitAndAtomic(0U, &mIntStatus);
-	if (!HDA_FLAG_MATCH(status, HDAC_INTSTS_GIS)) {
-		errorMsg("warning: reached handler with blank global interrupt status\n");
-		return;
-	}
+	while (HDA_FLAG_MATCH(status, HDAC_INTSTS_GIS)) {
 
-	trigger = 0;
+		trigger = 0;
+		
+		LOCK();
 
-	LOCK();
-
-	/* Was this a controller interrupt? */
-	if (HDA_FLAG_MATCH(status, HDAC_INTSTS_CIS)) {
-		UInt8 rirbStatus = readData8(HDAC_RIRBSTS);
-		/* Get as many responses that we can */
-		while (HDA_FLAG_MATCH(rirbStatus, HDAC_RIRBSTS_RINTFL)) {
-			writeData8(HDAC_RIRBSTS, HDAC_RIRBSTS_RINTFL);
-			if (rirbFlush() != 0)
-				trigger |= HDAC_TRIGGER_UNSOL;
-			rirbStatus = readData8(HDAC_RIRBSTS);
+		/* Was this a controller interrupt? */
+		if (HDA_FLAG_MATCH(status, HDAC_INTSTS_CIS)) {
+			UInt8 rirbStatus = readData8(HDAC_RIRBSTS);
+			/* Get as many responses that we can */
+			while (HDA_FLAG_MATCH(rirbStatus, HDAC_RIRBSTS_RINTFL)) {
+				writeData8(HDAC_RIRBSTS, HDAC_RIRBSTS_RINTFL);
+				if (rirbFlush() != 0)
+					trigger |= HDAC_TRIGGER_UNSOL;
+				rirbStatus = readData8(HDAC_RIRBSTS);
+			}
 		}
-	}
 
-	if (status & HDAC_INTSTS_SIS_MASK) {
-		for (int i = 0; i < mNumChannels; i++) {
-			if ((status & (1 << (mChannels[i].off >> 5))) &&
-					(handleStreamInterrupt(&mChannels[i]) != 0))
-				trigger |= (1 << i);
+		if (status & HDAC_INTSTS_SIS_MASK) {
+			for (int i = 0; i < mNumChannels; i++) {
+				if ((status & (1 << (mChannels[i].off >> 5))) &&
+				    (handleStreamInterrupt(&mChannels[i]) != 0))
+					trigger |= (1 << i);
+			}
 		}
+
+		for (int i = 0; i < mNumChannels; i++)
+			if (trigger & (1 << i))
+				handleChannelInterrupt(i);
+		if (trigger & HDAC_TRIGGER_UNSOL)
+			unsolqFlush();
+
+		UNLOCK();
+
+		status = OSBitAndAtomic(0U, &mIntStatus);
 	}
-
-	for (int i = 0; i < mNumChannels; i++)
-		if (trigger & (1 << i))
-			handleChannelInterrupt(i);
-	if (trigger & HDAC_TRIGGER_UNSOL)
-		unsolqFlush();
-
-	UNLOCK();
 }
 
 __attribute__((visibility("hidden")))
