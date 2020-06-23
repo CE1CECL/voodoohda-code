@@ -405,6 +405,8 @@ void VoodooHDADevice::disablePCIeNoSnoop(UInt16 vendorId)
 				mPciNub->configWrite16( INTEL_SCH_HDA_DEVC,	snoop16 & (~INTEL_SCH_HDA_DEVC_NOSNOOP));
 			}
 			break;
+		case AMD_VENDORID:
+			/* FALL THROUGH */
 		case ATI_VENDORID:
 			snoop8 = mPciNub->configRead8(0x42U);
 			if (!(snoop8 & 2U)) {
