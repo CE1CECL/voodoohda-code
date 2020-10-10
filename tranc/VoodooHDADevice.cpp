@@ -2359,7 +2359,9 @@ void VoodooHDADevice::mixerSetDefaults(PcmDevice *pcmDevice)
 {
 	//IOLog("VoodooHDADevice::mixerSetDefaults\n");
 	for (int n = 0; n < SOUND_MIXER_NRDEVICES; n++) {
-		audioCtlOssMixerSet(pcmDevice, n, mMixerDefaults[n], mMixerDefaults[n]);
+    uint32_t def = mMixerDefaults[n];
+    if (def > 100) def = 100;
+		audioCtlOssMixerSet(pcmDevice, n, def, def);
 	}
 //Slice - attention!	
 	if (audioCtlOssMixerSetRecSrc(pcmDevice, SOUND_MASK_INPUT) == 0)

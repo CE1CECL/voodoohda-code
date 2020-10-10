@@ -3803,7 +3803,7 @@ void VoodooHDADevice::audioCtlAmpGetInternal(nid_t cad, nid_t nid, int index, in
 void VoodooHDADevice::audioCtlAmpGetGain(AudioControl *control)
 {
 	nid_t nid, cad;
-	int lmute, rmute;
+	int lmute = 0, rmute = 0;
 	
 	cad = control->widget->funcGroup->codec->cad;
 	nid = control->widget->nid;
