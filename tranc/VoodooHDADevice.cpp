@@ -2364,7 +2364,7 @@ void VoodooHDADevice::mixerSetDefaults(PcmDevice *pcmDevice)
 		audioCtlOssMixerSet(pcmDevice, n, def, def);
 	}
 //Slice - attention!	
-	if (audioCtlOssMixerSetRecSrc(pcmDevice, SOUND_MASK_INPUT) == 0)
+//	if (audioCtlOssMixerSetRecSrc(pcmDevice, SOUND_MASK_INPUT) == 0)
 		//errorMsg("warning: couldn't set recording source to input\n");
 		return;
 }
