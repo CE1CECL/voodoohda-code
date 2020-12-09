@@ -243,7 +243,7 @@ bool VoodooHDAEngine::initHardware(IOService *provider)
 {
 	bool result = false;
 
-//	logMsg("VoodooHDAEngine[%p]::initHardware\n", this);
+	logMsg("VoodooHDAEngine[%p]::initHardware\n", this);
 
 	if (!super::initHardware(provider)) {
 		errorMsg("error: IOAudioEngine::initHardware failed\n");
@@ -255,7 +255,7 @@ bool VoodooHDAEngine::initHardware(IOService *provider)
 	mVerbose = mDevice->mVerbose;
 	getPortName();
 
-	//logMsg("setDesc portName = %s\n", mPortName);
+	logMsg("setDesc portName = %s\n", mPortName);
 	setDescription(mPortName);
 
 	setSampleOffset(SAMPLE_OFFSET);
@@ -558,6 +558,7 @@ bool VoodooHDAEngine::publishChannelLayout(IOAudioStreamDirection direction, UIn
 					  kIOAudioEngineOutputChannelLayoutKey),
 					 layout))
 		goto error;
+	layout->release();
 	return true;
 
 error:
