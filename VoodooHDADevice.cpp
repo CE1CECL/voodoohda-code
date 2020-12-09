@@ -405,6 +405,8 @@ void VoodooHDADevice::disablePCIeNoSnoop(UInt16 vendorId)
 				mPciNub->configWrite16( INTEL_SCH_HDA_DEVC,	snoop16 & (~INTEL_SCH_HDA_DEVC_NOSNOOP));
 			}
 			break;
+		case AMD_VENDORID:
+			/* FALL THROUGH */
 		case ATI_VENDORID:
 			snoop8 = mPciNub->configRead8(0x42U);
 			if (!(snoop8 & 2U)) {
@@ -424,6 +426,9 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 {
 	bool result = false;
 	UInt16 config, vendorId;
+	UInt32 gCtl;
+	UInt16 msiCtl;
+
 //moved here from init ----------
   mMsgBufferEnabled = false;
 	mMsgBufferSize = MSG_BUFFER_SIZE;
@@ -498,12 +503,15 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 	}
 	disablePCIeNoSnoop(vendorId);
 	if (vendorId == NVIDIA_VENDORID &&
-		!OSDynamicCast(OSBoolean, getProperty(kVoodooHDAAllowMSI)))
+	!OSDynamicCast(OSBoolean, getProperty(kVoodooHDAAllowMSI))) {
 		/*
 		 * Disable MSI for NVIDIA controller if not in Info.plist.
 		 *   Known to have problems with MSI (Quirk from HDAC)
 		 */
 		mAllowMSI = false;
+	}
+	msiCtl = mPciNub->configRead16(0x62);
+	logMsg("MSI_CTL=0x%04x\n", msiCtl);
 
 	if (!getCapabilities()) {
 		errorMsg("error: getCapabilities failed\n");
@@ -541,8 +549,10 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 // logMsg("Starting RIRB Engine...\n");
 	startRirb();
 
-//	logMsg("Enabling controller interrupt...\n");
-	writeData32(HDAC_GCTL, readData32(HDAC_GCTL) | HDAC_GCTL_UNSOL);
+	logMsg("Enabling controller interrupt...\n");
+	gCtl = readData32(HDAC_GCTL);
+	logMsg("HDAC_CTL=0x%04x\n", gCtl);
+	writeData32(HDAC_GCTL, gCtl | HDAC_GCTL_UNSOL);
 	writeData32(HDAC_INTCTL, HDAC_INTCTL_CIE | HDAC_INTCTL_GIE);
 	IODelay(1000);
 
@@ -1992,42 +2002,42 @@ void VoodooHDADevice::handleInterrupt()
 
 	mTotalInt++;
 	status = OSBitAndAtomic(0U, &mIntStatus);
-	if (!HDA_FLAG_MATCH(status, HDAC_INTSTS_GIS)) {
-		errorMsg("warning: reached handler with blank global interrupt status\n");
-		return;
-	}
+	while (HDA_FLAG_MATCH(status, HDAC_INTSTS_GIS)) {
 
-	trigger = 0;
+		trigger = 0;
 
-	LOCK();
+		LOCK();
 
-	/* Was this a controller interrupt? */
-	if (HDA_FLAG_MATCH(status, HDAC_INTSTS_CIS)) {
-		UInt8 rirbStatus = readData8(HDAC_RIRBSTS);
-		/* Get as many responses that we can */
-		while (HDA_FLAG_MATCH(rirbStatus, HDAC_RIRBSTS_RINTFL)) {
-			writeData8(HDAC_RIRBSTS, HDAC_RIRBSTS_RINTFL);
-			if (rirbFlush() != 0)
-				trigger |= HDAC_TRIGGER_UNSOL;
-			rirbStatus = readData8(HDAC_RIRBSTS);
+		/* Was this a controller interrupt? */
+		if (HDA_FLAG_MATCH(status, HDAC_INTSTS_CIS)) {
+			UInt8 rirbStatus = readData8(HDAC_RIRBSTS);
+			/* Get as many responses that we can */
+			while (HDA_FLAG_MATCH(rirbStatus, HDAC_RIRBSTS_RINTFL)) {
+				writeData8(HDAC_RIRBSTS, HDAC_RIRBSTS_RINTFL);
+				if (rirbFlush() != 0)
+					trigger |= HDAC_TRIGGER_UNSOL;
+				rirbStatus = readData8(HDAC_RIRBSTS);
+			}
 		}
-	}
 
-	if (status & HDAC_INTSTS_SIS_MASK) {
-		for (int i = 0; i < mNumChannels; i++) {
-			if ((status & (1 << (mChannels[i].off >> 5))) &&
-					(handleStreamInterrupt(&mChannels[i]) != 0))
-				trigger |= (1 << i);
+		if (status & HDAC_INTSTS_SIS_MASK) {
+			for (int i = 0; i < mNumChannels; i++) {
+				if ((status & (1 << (mChannels[i].off >> 5))) &&
+						(handleStreamInterrupt(&mChannels[i]) != 0))
+					trigger |= (1 << i);
+			}
 		}
+
+		for (int i = 0; i < mNumChannels; i++)
+			if (trigger & (1 << i))
+				handleChannelInterrupt(i);
+		if (trigger & HDAC_TRIGGER_UNSOL)
+			unsolqFlush();
+
+		UNLOCK();
+
+		status = OSBitAndAtomic(0U, &mIntStatus);
 	}
-
-	for (int i = 0; i < mNumChannels; i++)
-		if (trigger & (1 << i))
-			handleChannelInterrupt(i);
-	if (trigger & HDAC_TRIGGER_UNSOL)
-		unsolqFlush();
-
-	UNLOCK();
 }
 
 __attribute__((visibility("hidden")))
@@ -2348,10 +2358,13 @@ void VoodooHDADevice::mixerSetDefaults(PcmDevice *pcmDevice)
 {
 	//IOLog("VoodooHDADevice::mixerSetDefaults\n");
 	for (int n = 0; n < SOUND_MIXER_NRDEVICES; n++) {
-		audioCtlOssMixerSet(pcmDevice, n, mMixerDefaults[n], mMixerDefaults[n]);
+		uint32_t def = mMixerDefaults[n];
+		if (def > 100)
+			def = 100;
+		audioCtlOssMixerSet(pcmDevice, n, def, def);
 	}
 //Slice - attention!
-	if (audioCtlOssMixerSetRecSrc(pcmDevice, SOUND_MASK_INPUT) == 0)
+//	if (audioCtlOssMixerSetRecSrc(pcmDevice, SOUND_MASK_INPUT) == 0)
 		//errorMsg("warning: couldn't set recording source to input\n");
 		return;
 }
