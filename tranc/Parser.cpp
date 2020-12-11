@@ -38,7 +38,7 @@ void VoodooHDADevice::scanCodecs()
 	UInt16 stateStatus;
 
 	stateStatus = readData16(HDAC_STATESTS);
-  writeData16(HDAC_STATESTS, stateStatus);
+	writeData16(HDAC_STATESTS, stateStatus);
 	for (int i = 0; i < HDAC_CODEC_MAX; i++) {
 		if (HDAC_STATESTS_SDIWAKE(stateStatus, i)) {
 			/* We have found a codec. */
@@ -106,12 +106,12 @@ void VoodooHDADevice::probeCodec(Codec *codec)
 	startNode = HDA_PARAM_SUB_NODE_COUNT_START(subNode);
 	endNode = startNode + HDA_PARAM_SUB_NODE_COUNT_TOTAL(subNode);
 	dumpMsg("\tstartNode=%d endNode=%d\n", startNode, endNode);
-  int numNodes = endNode - startNode;
-  if (numNodes < 0 || numNodes > 50) {
-    errorMsg("wrong nodes number: start=%d end=%d\n", startNode, endNode);
-    return;
-  }
-	
+	int numNodes = endNode - startNode;
+	if (numNodes < 0 || numNodes > 50) {
+		errorMsg("wrong nodes number: start=%d end=%d\n", startNode, endNode);
+		return;
+	}
+
 	codec->funcGroups = (FunctionGroup *) allocMem(sizeof (FunctionGroup) * numNodes);
 	if (!codec->funcGroups) {
 		errorMsg("error: couldn't allocate memory for function groups\n");
@@ -382,10 +382,10 @@ void VoodooHDADevice::audioCtlParse(FunctionGroup *funcGroup)
 
 	funcGroup->audio.numControls = max;
 
-  if (max < 1 || max > 50) {
-    errorMsg("error: wrong controls number %d\n", max);
+	if (max < 1 || max > 50) {
+		errorMsg("error: wrong controls number %d\n", max);
 		return;
-  }
+	}
 
 	controls = (AudioControl *) allocMem(sizeof (*controls) * max);
 	if (!controls) {
@@ -573,7 +573,7 @@ void VoodooHDADevice::vendorPatchParse(FunctionGroup *funcGroup)
 	}
 //Slice -- begin patching
 	dumpMsg("Nodes patching. Codec = %d \n", (int)(funcGroup->codec->cad));
-  dumpMsg("NumNodes = %d\n", NumNodes);
+	dumpMsg("NumNodes = %d\n", NumNodes);
 	for (int i = 0; i<NumNodes; i++){
 		N = NodesToPatchArray[i].Node;
 		if (!N) 
@@ -624,48 +624,47 @@ void VoodooHDADevice::vendorPatchParse(FunctionGroup *funcGroup)
 			widget->favoritDAC = NodesToPatchArray[i].favoritDAC;
 		}
 	}
-	// log after patch	
-  for (int i = funcGroup->startNode; i < funcGroup->endNode; i++) {
-    widget = widgetGet(funcGroup, i);
-    if (!widget || (widget->enable == 0)) // || !(widget->type == 4))
-      continue;
-    if (mDisableInputMonitor) {
-      if ((funcGroup->codec->vendorId == REALTEK_VENDORID) && (i == 11)) {
-        widget->enable = 0;
-        dumpMsg("VHDevice NID=11 disabled for Realtek by user info.list\n");
-        continue;
-      } else if ((funcGroup->codec->vendorId == IDT_VENDORID) &&  (i == 27)) {
-        widget->enable = 0;
-        dumpMsg("VHDevice NID=27 disabled for IDT by user info.list\n");
-        continue;
-      } else if ((funcGroup->codec->vendorId == ANALOGDEVICES_VENDORID) &&  (i == 33)) {
-        widget->enable = 0;
-        dumpMsg("VHDevice NID=33 disabled for AD by user info.list\n");
-        continue;
-      }
-      /* else if ((funcGroup->codec->vendorId == VIA_VENDORID) &&  (i == 22)) {
-        widget->enable = 0;
-        dumpMsg("VHDevice NID=22 disabled for VIA by user info.list\n");
-        continue;
-      } */
-    }
+	// log after patch
+	for (int i = funcGroup->startNode; i < funcGroup->endNode; i++) {
+		widget = widgetGet(funcGroup, i);
+		if (!widget || (widget->enable == 0)) // || !(widget->type == 4))
+			continue;
+		if (mDisableInputMonitor) {
+			if ((funcGroup->codec->vendorId == REALTEK_VENDORID) && (i == 11)) {
+				widget->enable = 0;
+				dumpMsg("VHDevice NID=11 disabled for Realtek by user info.list\n");
+				continue;
+			} else if ((funcGroup->codec->vendorId == IDT_VENDORID) &&  (i == 27)) {
+				widget->enable = 0;
+				dumpMsg("VHDevice NID=27 disabled for IDT by user info.list\n");
+				continue;
+			} else if ((funcGroup->codec->vendorId == ANALOGDEVICES_VENDORID) &&  (i == 33)) {
+				widget->enable = 0;
+				dumpMsg("VHDevice NID=33 disabled for AD by user info.list\n");
+				continue;
+			}
+			/* else if ((funcGroup->codec->vendorId == VIA_VENDORID) &&  (i == 22)) {
+			 widget->enable = 0;
+			 dumpMsg("VHDevice NID=22 disabled for VIA by user info.list\n");
+			 continue;
+			 } */
+		}
 
+		dumpMsg("VHDevice NID=%2d Config=%08lx (%-14s) Cap=%08lx Ctrl=%08lx", i, (long unsigned int)widget->pin.config,
+				&widget->name[0], (long unsigned int)widget->pin.cap, (long unsigned int)widget->pin.ctrl);
+		dumpMsg(" -- Conns:");
+		widget->connsenabled = 0;
+		for (int j = 0; j < widget->nconns; j++){
+			if (widget->connsenable[j] == 0)
+				continue;
+			widget->connsenabled++;
+			dumpMsg(" %d=%d", j, widget->conns[j]);
 
-    dumpMsg("VHDevice NID=%2d Config=%08lx (%-14s) Cap=%08lx Ctrl=%08lx", i, (long unsigned int)widget->pin.config,
-            &widget->name[0], (long unsigned int)widget->pin.cap, (long unsigned int)widget->pin.ctrl);
-    dumpMsg(" -- Conns:");
-    widget->connsenabled = 0;
-    for (int j = 0; j < widget->nconns; j++){
-      if (widget->connsenable[j] == 0)
-        continue;
-      widget->connsenabled++;
-      dumpMsg(" %d=%d", j, widget->conns[j]);
-
-      if(widget->selconn == j)
-        dumpMsg( "(select)");
-    }
-    dumpMsg("\n");
-  }
+			if(widget->selconn == j)
+				dumpMsg( "(select)");
+		}
+		dumpMsg("\n");
+	}
 //
 //Slice - disable any predefined patches
 #if 0	
@@ -932,7 +931,7 @@ void VoodooHDADevice::audioDisableUseless(FunctionGroup *funcGroup)
 			if (widget->connsenabled < 1) {
 				widget->enable = 0;
 				done = 0;
-				dumpMsg(" Disabling nid %d due to all it's inputs disabled.\n", widget->nid);				
+				dumpMsg(" Disabling nid %d due to all it's inputs disabled.\n", widget->nid);
 			}
 			/* Disable nodes without consumers. */
 		/*	if ((widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_AUDIO_SELECTOR) &&
@@ -983,10 +982,10 @@ void VoodooHDADevice::audioAssociationParse(FunctionGroup *funcGroup)
 
 	funcGroup->audio.numAssocs = max;
 
-  if (max < 1 || max > 50) {
-    errorMsg("wrong assocs number! %d\n", max);
+	if (max < 1 || max > 50) {
+		errorMsg("wrong assocs number! %d\n", max);
 		return;
-  }
+	}
 
 	assocs = (AudioAssoc *) allocMem(sizeof (*assocs) * max);
 	if (!assocs) {
@@ -995,7 +994,7 @@ void VoodooHDADevice::audioAssociationParse(FunctionGroup *funcGroup)
 		funcGroup->audio.numAssocs = 0;
 		return;
 	}
-	
+
 	for (int i = 0; i < max; i++) {
 		assocs[i].hpredir = -1;
 		assocs[i].chan = -1;
@@ -1033,7 +1032,7 @@ void VoodooHDADevice::audioAssociationParse(FunctionGroup *funcGroup)
 				dir = HDA_CTL_OUT;
 			else
 				dir = HDA_CTL_IN;
-			
+
 			/* If this is a first pin - create new association. */
 			if (assocs[cnt].pincnt == 0) {
 				assocs[cnt].enable = 1;
@@ -1065,7 +1064,7 @@ void VoodooHDADevice::audioAssociationParse(FunctionGroup *funcGroup)
 				else
 					assocs[cnt].digital = 1;
 			}
-			
+
 			if (HDA_CONFIG_DEFAULTCONF_MISC(widget->pin.config) & 1 ) {
 				assocs[cnt].defaultPin = seq;
 			} else {
@@ -1084,9 +1083,9 @@ void VoodooHDADevice::audioAssociationParse(FunctionGroup *funcGroup)
 			if (hpredir && (assocs[cnt].pincnt > 1))
 				assocs[cnt].hpredir = first;  //Slice - dunno if it needed
 			if (assocs[cnt].defaultPin < 0) // && (assocs[cnt].pincnt > 1))
-				assocs[cnt].defaultPin = first;  			
+				assocs[cnt].defaultPin = first;
 			cnt++;
-		}		
+		}
 	}
 double_break:
 
@@ -1117,25 +1116,25 @@ void VoodooHDADevice::audioBuildTree(FunctionGroup *funcGroup)
 			continue;
 		dumpMsg("Tracing association %d (%d)\n", j, assocs[j].index);
 		if (assocs[j].dir == HDA_CTL_OUT) {
-      do {
-        res = audioTraceAssociationOut(funcGroup, j, 0);
-        if ((res == 0) && (assocs[j].hpredir >= 0) && (assocs[j].fakeredir == 0)) {
-          /* If codec can't do analog HP redirection
-				   try to make it using one more DAC. */
-          assocs[j].fakeredir = 1;
-          continue;
-        }
-        break;
-      } while (true);
+			do {
+				res = audioTraceAssociationOut(funcGroup, j, 0);
+				if ((res == 0) && (assocs[j].hpredir >= 0) && (assocs[j].fakeredir == 0)) {
+					/* If codec can't do analog HP redirection
+					   try to make it using one more DAC. */
+					assocs[j].fakeredir = 1;
+					continue;
+				}
+				break;
+			} while (true);
 		} else {
 			res = audioTraceAssociationIn(funcGroup, j);
-    }
-    if (res)
-      dumpMsg("Association %d (%d) trace succeeded\n", j, assocs[j].index);
-    else {
-      dumpMsg("Association %d (%d) trace failed\n", j, assocs[j].index);
-      assocs[j].enable = 0;
-    }
+		}
+		if (res)
+			dumpMsg("Association %d (%d) trace succeeded\n", j, assocs[j].index);
+		else {
+			dumpMsg("Association %d (%d) trace failed\n", j, assocs[j].index);
+			assocs[j].enable = 0;
+		}
 	}
 
 	/* Trace mixer and beeper pseudo associations. */
@@ -1310,7 +1309,7 @@ void VoodooHDADevice::audioDisableCrossAssociations(FunctionGroup *funcGroup)
           widget->connsenabled--;
           dumpMsg(" Disabling connection output mixer nid %d conn %d to monitor %d.\n", i, j,
                             childWidget->nid);
-        }
+		}
       }
 			continue;
     }
@@ -1326,7 +1325,7 @@ void VoodooHDADevice::audioDisableCrossAssociations(FunctionGroup *funcGroup)
 			if ((childWidget->bindAssoc == -2) ||
 				((widget->pflags & HDA_ADC_MONITOR) &&
 			     (childWidget->bindAssoc >= 0) &&
-			     (assocs[childWidget->bindAssoc].dir == HDA_CTL_IN)))				
+			     (assocs[childWidget->bindAssoc].dir == HDA_CTL_IN)))
 				continue;
 			if ((widget->bindAssoc == childWidget->bindAssoc) &&
 					((widget->bindSeqMask & childWidget->bindSeqMask) != 0))
@@ -1348,13 +1347,13 @@ void VoodooHDADevice::audioDisableCrossAssociations(FunctionGroup *funcGroup)
 			continue;
 /*		if ((control->widget->bindAssoc == -2) || (control->childWidget->bindAssoc == -2))
 			continue;*/
-		if (control->widget->bindAssoc == -2) 
+		if (control->widget->bindAssoc == -2)
 			continue;
 		if (control->childWidget->bindAssoc == -2 ||
 		    ((control->widget->pflags & HDA_ADC_MONITOR) &&
 		     control->childWidget->bindAssoc >= 0 &&
 		     assocs[control->childWidget->bindAssoc].dir == HDA_CTL_IN))
-			continue;			
+			continue;
 		if ((control->widget->bindAssoc != control->childWidget->bindAssoc) ||
 		    	((control->widget->bindSeqMask & control->childWidget->bindSeqMask) == 0)) {
 			control->forcemute = 1;
@@ -1745,54 +1744,58 @@ void VoodooHDADevice::audioTraceAssociationExtra(FunctionGroup *funcGroup)
 	/* Find mixer associated with input, but supplying signal
 	   for output associations. Hope it will be input monitor. */
 	dumpMsg("Tracing input monitor\n");
-  /*
-  if (0 && mDisableInputMonitor) {
-    dumpMsg(" disabled by Info.plist set\n");
-  } else {
-   */
-    for (int j = funcGroup->startNode; j < funcGroup->endNode; j++) {
-      Widget *widget = widgetGet(funcGroup, j);
-      if (!widget || (widget->enable == 0))
-        continue;
-      if (widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_AUDIO_MIXER)
-        continue;
-      if ((widget->bindAssoc < 0) || (assocs[widget->bindAssoc].dir != HDA_CTL_IN))
-        continue;
-      dumpMsg(" Tracing nid mix %d to out\n", j);
-      if (audioTraceToOut(funcGroup, widget->nid, 0)) {
-        //if(mVerbose > 0)
+#if 0
+	if (0 && mDisableInputMonitor) {
+		dumpMsg(" disabled by Info.plist set\n");
+	} else {
+#endif
+		for (int j = funcGroup->startNode; j < funcGroup->endNode; j++) {
+			Widget *widget = widgetGet(funcGroup, j);
+			if (!widget || (widget->enable == 0))
+				continue;
+			if (widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_AUDIO_MIXER)
+				continue;
+			if ((widget->bindAssoc < 0) || (assocs[widget->bindAssoc].dir != HDA_CTL_IN))
+				continue;
+			dumpMsg(" Tracing nid mix %d to out\n", j);
+			if (audioTraceToOut(funcGroup, widget->nid, 0)) {
+			//if(mVerbose > 0)
 				dumpMsg(" nid %d is input monitor\n", widget->nid);
-        /*
-        if (0 && mDisableInputMonitor) {
-          audioUndoTrace(funcGroup, widget->bindAssoc, -1);
-        } else {
-         */
-          widget->pflags |= HDA_ADC_MONITOR;
-          widget->ossdev = SOUND_MIXER_IGAIN; //SOUND_MIXER_IMIX;
-//        }
-//      }
-    }
-    /* Other inputs monitor */
-    /* Find input pins supplying signal for output associations.
-     Hope it will be input monitoring. */
-    dumpMsg("Tracing other input monitors\n");
-    for (int j = funcGroup->startNode; j < funcGroup->endNode; j++) {
-      Widget *widget = widgetGet(funcGroup, j);
-      if (!widget || (widget->enable == 0))
-        continue;
-      if (widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_PIN_COMPLEX)
-        continue;
-      if (widget->bindAssoc < 0 || assocs[widget->bindAssoc].dir != HDA_CTL_IN)
-        continue;
-      dumpMsg(" Tracing nid complex %d to out\n", j);
-      
-      if (audioTraceToOut(funcGroup, widget->nid, 0))  {
-        dumpMsg( " nid %d is input monitor\n", widget->nid);
-      }
-    }
-  }
-	
-	
+#if 0
+				if (0 && mDisableInputMonitor) {
+					audioUndoTrace(funcGroup, widget->bindAssoc, -1);
+				} else {
+#endif
+					widget->pflags |= HDA_ADC_MONITOR;
+					widget->ossdev = SOUND_MIXER_IGAIN; //SOUND_MIXER_IMIX;
+#if 0
+				}
+#endif
+			}
+		}
+		/* Other inputs monitor */
+		/* Find input pins supplying signal for output associations.
+		   Hope it will be input monitoring. */
+		dumpMsg("Tracing other input monitors\n");
+		for (int j = funcGroup->startNode; j < funcGroup->endNode; j++) {
+			Widget *widget = widgetGet(funcGroup, j);
+			if (!widget || (widget->enable == 0))
+				continue;
+			if (widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_PIN_COMPLEX)
+				continue;
+			if (widget->bindAssoc < 0 || assocs[widget->bindAssoc].dir != HDA_CTL_IN)
+				continue;
+			dumpMsg(" Tracing nid complex %d to out\n", j);
+
+			if (audioTraceToOut(funcGroup, widget->nid, 0)) {
+				dumpMsg( " nid %d is input monitor\n", widget->nid);
+			}
+		}
+#if 0
+	}
+#endif
+
+
 	/* Beeper */
 	dumpMsg("Tracing beeper\n");
 	for (int j = funcGroup->startNode; j < funcGroup->endNode; j++) {
@@ -1816,14 +1819,14 @@ void VoodooHDADevice::audioBindAssociation(FunctionGroup *funcGroup)
 	AudioAssoc *assocs = funcGroup->audio.assocs;
 	int cnt = 0, free_channels;
 
-  for (int j = 0; j < funcGroup->audio.numAssocs; j++) {
+	for (int j = 0; j < funcGroup->audio.numAssocs; j++) {
 		if (assocs[j].enable)
 			cnt++;
-  }
-  if (cnt < 0 || cnt > 50) {
-    errorMsg("Wrong channels number %d!\n", cnt);
-    return;
-  }
+	}
+	if (cnt < 0 || cnt > 50) {
+		errorMsg("Wrong channels number %d!\n", cnt);
+		return;
+	}
 	if (mNumChannels == 0) {
 		mChannels = (Channel *) allocMem(sizeof (Channel) * cnt);
 		if (!mChannels) {
@@ -2282,9 +2285,9 @@ void VoodooHDADevice::audioPreparePinCtrl(FunctionGroup *funcGroup)
 			continue;
 		if (widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_PIN_COMPLEX)
 			continue;
-    
-    // Alejandro
-    bool patchEnabled = false;                                  // Alejandro
+
+	// Alejandro
+		bool patchEnabled = false;                                  // Alejandro
 		for(int n = 0; n < NumNodes; n++) {                         //
 			if(widget->nid == (int) NodesToPatchArray[n].Node) {    //
 				if(NodesToPatchArray[n].Enable & 0x20) {            //
@@ -3520,15 +3523,15 @@ UInt32 VoodooHDADevice::widgetGetCaps(Widget *widget, int *waspin)
 	case HDA_CODEC_STAC9228X:
 		beeper = 35;
 		break;
-  case HDA_CODEC_VT2020:
-    beeper = 34;
-    break;
+	case HDA_CODEC_VT2020:
+		beeper = 34;
+		break;
 	default:
 		if (HDA_PARAM_VENDOR_ID_VENDOR_ID(id) == REALTEK_VENDORID)
-      beeper = 29;
-    if (HDA_PARAM_VENDOR_ID_VENDOR_ID(id) == IDT_VENDORID)
-      beeper = 33;
-		break; 
+			beeper = 29;
+		if (HDA_PARAM_VENDOR_ID_VENDOR_ID(id) == IDT_VENDORID)
+			beeper = 33;
+		break;
 	}
 	if (nid == beeper) {
 		caps &= ~HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_MASK;

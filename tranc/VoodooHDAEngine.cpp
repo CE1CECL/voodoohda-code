@@ -651,7 +651,7 @@ bool VoodooHDAEngine::publishChannelLayout(IOAudioStreamDirection direction, UIn
 					  kIOAudioEngineOutputChannelLayoutKey),
 					 layout))
 		goto error;
-  layout->release();
+	layout->release();
 	return true;
 
 error:
@@ -863,7 +863,7 @@ bool VoodooHDAEngine::createAudioControls()
 		if (haveDigitalMuteControl(initOssMask))
 			goto createMuteControl;
 		else
-		goto createSelectorControl;
+			goto createSelectorControl;
 	}
 
 	minMaxDb = getMinMaxDb(initOssMask);
@@ -981,14 +981,14 @@ void VoodooHDAEngine::setPinName(UInt32 pinConfig, const char* name)
 __attribute__((visibility("hidden")))
 IOReturn VoodooHDAEngine::volumeChangeHandler(IOService *target, IOAudioControl *volumeControl, SInt32 oldValue, SInt32 newValue)
 {
-  IOReturn result = kIOReturnBadArgument;
-  VoodooHDAEngine *audioEngine = OSDynamicCast(VoodooHDAEngine, target);
-  
-  if (audioEngine) {
-    result = audioEngine->volumeChanged(volumeControl, oldValue, newValue);
-  }
-  
-  return result;
+	IOReturn result = kIOReturnBadArgument;
+	VoodooHDAEngine *audioEngine = OSDynamicCast(VoodooHDAEngine, target);
+
+	if (audioEngine) {
+		result = audioEngine->volumeChanged(volumeControl, oldValue, newValue);
+	}
+
+	return result;
 }
 
 __attribute__((visibility("hidden")))
@@ -996,12 +996,12 @@ IOReturn VoodooHDAEngine::volumeChanged(IOAudioControl *volumeControl, SInt32 ol
 {
 	if(mVerbose >2)
 		errorMsg("VoodooHDAEngine[%p]::volumeChanged(%p, %ld, %ld)\n", this, volumeControl, (long int)oldValue, (long int)newValue);
-  
-  if (volumeControl) {
-    
+
+	if (volumeControl) {
+
 		int ossDev = ( getEngineDirection() == kIOAudioStreamDirectionOutput) ? SOUND_MIXER_VOLUME:
-    SOUND_MIXER_MIC;
-		
+		SOUND_MIXER_MIC;
+
 		PcmDevice *pcmDevice = mChannel->pcmDevice;
 		
 		switch (ossDev) {
@@ -1042,21 +1042,21 @@ IOReturn VoodooHDAEngine::volumeChanged(IOAudioControl *volumeControl, SInt32 ol
 		}
     
 	}
-	
-  return kIOReturnSuccess;
+
+	return kIOReturnSuccess;
 }
 
 __attribute__((visibility("hidden")))
 IOReturn VoodooHDAEngine::muteChangeHandler(IOService *target, IOAudioControl *muteControl, SInt32 oldValue, SInt32 newValue)
 {
-    IOReturn result = kIOReturnBadArgument;
-    VoodooHDAEngine *audioEngine = OSDynamicCast(VoodooHDAEngine, target);
-    
-    if (audioEngine) {
-        result = audioEngine->muteChanged(muteControl, oldValue, newValue);
-    }
-    
-    return result;
+	IOReturn result = kIOReturnBadArgument;
+	VoodooHDAEngine *audioEngine = OSDynamicCast(VoodooHDAEngine, target);
+
+	if (audioEngine) {
+		result = audioEngine->muteChanged(muteControl, oldValue, newValue);
+	}
+
+	return result;
 }
 
 __attribute__((visibility("hidden")))

@@ -112,7 +112,7 @@ class IODMACommand;
 
 typedef struct _DmaMemory {
 	const char *description;
-  IOBufferMemoryDescriptor *md;
+	IOBufferMemoryDescriptor *md;
 	UInt64 size;
 	UInt64 physAddr;
 	IOVirtualAddress virtAddr;

@@ -161,7 +161,7 @@ public:
 	
 	bool mSwitchEnable;
 	bool mInhibitCache;
-  bool mDisableInputMonitor;
+	bool mDisableInputMonitor;
 
 	// cue8chalk: flag to enable/disable volume fix (loaded from plist)
 	bool mEnableVolumeChangeFix;
@@ -194,7 +194,7 @@ public:
 	virtual void stop(IOService *provider);
 	virtual void free();
 
-  virtual IOReturn performPowerStateChange(IOAudioDevicePowerState oldPowerState,
+	virtual IOReturn performPowerStateChange(IOAudioDevicePowerState oldPowerState,
 			IOAudioDevicePowerState newPowerState, UInt32 *microsecondsUntilComplete);
 	bool suspend();
 	bool resume();

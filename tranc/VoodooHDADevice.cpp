@@ -426,9 +426,9 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 {
 	bool result = false;
 	UInt16 config, vendorId;
-  UInt32 gCtl;
-  UInt16 msiCtl;
-  
+	UInt32 gCtl;
+	UInt16 msiCtl;
+
 //moved here from init ----------
   mMsgBufferEnabled = false;
 	mMsgBufferSize = MSG_BUFFER_SIZE;
@@ -509,10 +509,10 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 		 *   Known to have problems with MSI (Quirk from HDAC)
 		 */
 		mAllowMSI = false;
-  }
-  msiCtl = mPciNub->configRead16(0x62);
-  logMsg("MSI_CTL=0x%04x\n", msiCtl);
-  
+	}
+	msiCtl = mPciNub->configRead16(0x62);
+	logMsg("MSI_CTL=0x%04x\n", msiCtl);
+
 	if (!getCapabilities()) {
 		errorMsg("error: getCapabilities failed\n");
 		goto done;
@@ -550,8 +550,8 @@ bool VoodooHDADevice::initHardware(IOService *provider)
 	startRirb();
 
 	logMsg("Enabling controller interrupt...\n");
-  gCtl = readData32(HDAC_GCTL);
-  logMsg("HDAC_CTL=0x%04x\n", gCtl);
+	gCtl = readData32(HDAC_GCTL);
+	logMsg("HDAC_CTL=0x%04x\n", gCtl);
 	writeData32(HDAC_GCTL, gCtl | HDAC_GCTL_UNSOL);
 	writeData32(HDAC_INTCTL, HDAC_INTCTL_CIE | HDAC_INTCTL_GIE);
 	IODelay(1000);
@@ -934,8 +934,8 @@ bool VoodooHDADevice::resetController(bool wakeup)
 
 	//logMsg("VoodooHDADevice[%p]::resetController(%d)\n", this, wakeup);
 
-  /* Make sure WAKEEN bits are off */
-  writeData16(HDAC_WAKEEN, 0U);
+	/* Make sure WAKEEN bits are off */
+	writeData16(HDAC_WAKEEN, 0U);
 
 	/* Stop all Streams DMA engine */
 	for (int i = 0; i < mInStreamsSup; i++)
@@ -1147,7 +1147,7 @@ void VoodooHDADevice::dumpMsg(const char *format, ...)
 void VoodooHDADevice::messageHandler(UInt32 type, const char *format, va_list args)
 {
 	bool lockExists;
-  int length;
+	int length;
 
 	ASSERT(type);
 	ASSERT(format);
@@ -1618,8 +1618,8 @@ DmaMemory *VoodooHDADevice::allocateDmaMemory(mach_vm_size_t size, const char *d
 	if (!segAddr) {
 		errorMsg("error: IOBufferMemoryDescriptor::getPhysicalSegment failed\n");
 		memDesc->complete();
-			goto failed;
-		}
+		goto failed;
+	}
 
 	virtAddr = memDesc->getBytesNoCopy();
 	ASSERT(virtAddr);
@@ -2359,8 +2359,9 @@ void VoodooHDADevice::mixerSetDefaults(PcmDevice *pcmDevice)
 {
 	//IOLog("VoodooHDADevice::mixerSetDefaults\n");
 	for (int n = 0; n < SOUND_MIXER_NRDEVICES; n++) {
-    uint32_t def = mMixerDefaults[n];
-    if (def > 100) def = 100;
+		uint32_t def = mMixerDefaults[n];
+		if (def > 100)
+			def = 100;
 		audioCtlOssMixerSet(pcmDevice, n, def, def);
 	}
 //Slice - attention!	
