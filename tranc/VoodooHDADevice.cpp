@@ -1543,7 +1543,7 @@ void VoodooHDADevice::assertLock(IOLock *lock, UInt32 type)
 	ASSERT(type); // type can be either LCK_MTX_ASSERT_OWNED or LCK_MTX_ASSERT_NOTOWNED
 	mutex = IOLockGetMachLock(lock);
 	ASSERT(mutex);
-	lck_mtx_assert(mutex, type);
+//	lck_mtx_assert(mutex, type);
 }
 
 extern "C" {
