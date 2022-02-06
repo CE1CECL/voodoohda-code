@@ -248,7 +248,7 @@ UInt32 VoodooHDAEngine::getNumCtls(UInt32 dev)
 	UInt32 numCtls = 0;
 	AudioControl *control;
 
-	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, &i)); ) {
+	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, i)); i++) {
 		if ((control->enable == 0) || !(control->ossmask & (1 << dev)))
 			continue;
 		if (!((control->widget->bindAssoc == mChannel->assocNum) || (control->widget->bindAssoc == -2)))
@@ -270,7 +270,7 @@ UInt64 VoodooHDAEngine::getMinMaxDb(UInt32 mask)
 
 	// xxx: we currently use the values from the first found control (ie. amplifier settings)
 
-	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, &i)); ) {
+	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, i)); i++) {
 		if ((control->enable == 0) || !(control->ossmask & mask))
 			continue;
 		if (!((control->widget->bindAssoc == mChannel->assocNum) || (control->widget->bindAssoc == -2)))
@@ -290,7 +290,7 @@ bool VoodooHDAEngine::haveDigitalMuteControl(UInt32 mask)
 {
 	AudioControl *control;
 
-	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, &i)); ) {
+	for (int i = 0; (control = mDevice->audioCtlEach(mChannel->funcGroup, i)); i++) {
 		if ((control->enable == 0) || !(control->ossmask & mask))
 			continue;
 		if (!((control->widget->bindAssoc == mChannel->assocNum) || (control->widget->bindAssoc == -2)))

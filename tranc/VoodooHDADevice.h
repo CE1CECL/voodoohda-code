@@ -269,7 +269,7 @@ public:
 
 	char *audioCtlMixerMaskToString(UInt32 mask, char *buf, size_t len);
 
-	AudioControl *audioCtlEach(FunctionGroup *funcGroup, int *index);
+	AudioControl *audioCtlEach(FunctionGroup *funcGroup, int index);
 	AudioControl *audioCtlAmpGet(FunctionGroup *funcGroup, nid_t nid, int direction, int index, int cnt);
 	void audioCtlAmpSetInternal(nid_t cad, nid_t nid, int index, int lmute, int rmute, int left, int right,
 			int direction);

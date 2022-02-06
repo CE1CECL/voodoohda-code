@@ -265,7 +265,7 @@ void VoodooHDADevice::probeFunction(Codec *codec, nid_t nid)
 	dumpMsg("| DUMPING HDA AMPLIFIERS |\n");
 	dumpMsg("+------------------------+\n");
 	dumpMsg("\n");
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		dumpMsg("%3d: nid %3d %s (%s) index %d", i, (control->widget) ? control->widget->nid : -1,
 				(control->ndir == HDA_CTL_IN) ? "in " : "out",
 				(control->dir == HDA_CTL_IN) ? "in " : "out", control->index);
@@ -380,14 +380,13 @@ void VoodooHDADevice::audioCtlParse(FunctionGroup *funcGroup)
 		}
 	}
 
-	funcGroup->audio.numControls = max;
-
-	if (max < 1 || max > 50) {
-		errorMsg("error: wrong controls number %d\n", max);
+  funcGroup->audio.numControls = max;
+	if (max < 1) {
+		dumpMsg("no controls in the codec\n");
 		return;
 	}
-
-	controls = (AudioControl *) allocMem(sizeof (*controls) * max);
+  
+	controls = (AudioControl *) allocMem(sizeof (*controls) * max); //if we are here then max >=1
 	if (!controls) {
 		errorMsg("error: unable to allocate controls\n");
 		funcGroup->audio.numControls = 0;
@@ -858,7 +857,7 @@ void VoodooHDADevice::audioDisableUseless(FunctionGroup *funcGroup)
 		AudioControl *control;
 		done = 1;
 		/* Disable and mute controls for disabled widgets. */
-		for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+		for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 			if (control->enable == 0)
 				continue;
 			if (control->widget->enable == 0 || (control->childWidget && (control->childWidget->enable == 0 || !control->widget->connsenable[control->index]))) {
@@ -1342,7 +1341,7 @@ void VoodooHDADevice::audioDisableCrossAssociations(FunctionGroup *funcGroup)
 	}
 
 	/* ... using controls */
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		if ((control->enable == 0) || !control->childWidget)
 			continue;
 /*		if ((control->widget->bindAssoc == -2) || (control->childWidget->bindAssoc == -2))
@@ -2269,7 +2268,7 @@ void VoodooHDADevice::audioAssignMixers(FunctionGroup *funcGroup)
 		}
 	}
 	/* Treat unrequired as possible. */
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); )
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++)
 		if (control->ossmask == 0)
 			control->ossmask = control->possmask;
 }
@@ -2345,7 +2344,7 @@ void VoodooHDADevice::audioPreparePinCtrl(FunctionGroup *funcGroup)
 void VoodooHDADevice::audioCtlCommit(FunctionGroup *funcGroup)
 {
 	AudioControl *control;
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		int z;
 		if ((control->enable == 0) || (control->ossmask != 0)) {
 			/* Mute disabled and mixer controllable controls.
@@ -2452,7 +2451,7 @@ void VoodooHDADevice::dumpCtls(PcmDevice *pcmDevice, const char *banner, UInt32 
 		if ((flag & (1 << j)) == 0)
 			continue;
 		printed = 0;
-		for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+		for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 			if ((control->enable == 0) || (control->widget->enable == 0))
 				continue;
 			if (!(((pcmDevice->playChanId >= 0) &&
@@ -3679,13 +3678,13 @@ char *VoodooHDADevice::audioCtlMixerMaskToString(UInt32 mask, char *buf, size_t 
 	return buf;
 }
 
-AudioControl *VoodooHDADevice::audioCtlEach(FunctionGroup *funcGroup, int *index)
+AudioControl *VoodooHDADevice::audioCtlEach(FunctionGroup *funcGroup, int index)
 {
-	if (!funcGroup || (funcGroup->nodeType != HDA_PARAM_FCT_GRP_TYPE_NODE_TYPE_AUDIO) || !index ||
-			!funcGroup->audio.controls || (funcGroup->audio.numControls < 1) || (*index < 0) ||
-			(*index >= funcGroup->audio.numControls))
+	if (!funcGroup || (funcGroup->nodeType != HDA_PARAM_FCT_GRP_TYPE_NODE_TYPE_AUDIO) ||
+			!funcGroup->audio.controls || (funcGroup->audio.numControls < 1) ||
+			(index >= funcGroup->audio.numControls))
 		return NULL;
-	return &funcGroup->audio.controls[(*index)++];
+	return &funcGroup->audio.controls[index];
 }
 
 AudioControl *VoodooHDADevice::audioCtlAmpGet(FunctionGroup *funcGroup, nid_t nid, int dir, int index, int cnt)
@@ -3695,7 +3694,7 @@ AudioControl *VoodooHDADevice::audioCtlAmpGet(FunctionGroup *funcGroup, nid_t ni
 	if (!funcGroup || !funcGroup->audio.controls)
 		return NULL;
 
-	for (int i = 0, found = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0, found = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		if (control->enable == 0)
 			continue;
 		if (control->widget->nid != nid)
@@ -4898,7 +4897,7 @@ void VoodooHDADevice::extDumpCtls(PcmDevice *pcmDevice, const char *banner, UInt
 		if ((flag & (1 << j)) == 0)
 			continue;
 		printed = 0;
-		for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+		for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 			if ((control->enable == 0) || (control->widget->enable == 0))
 				continue;
 			if (!(((pcmDevice->playChanId >= 0) &&

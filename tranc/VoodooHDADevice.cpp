@@ -2093,7 +2093,7 @@ int VoodooHDADevice::audioCtlOssMixerInit(PcmDevice *pcmDevice)
 
 	/* Declare volume controls assigned to this association. */
 	control = NULL;
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		if (control->enable == 0)
 			continue;
 		if (((pcmDevice->playChanId >= 0) &&
@@ -2135,7 +2135,7 @@ int VoodooHDADevice::audioCtlOssMixerInit(PcmDevice *pcmDevice)
 			mask |= SOUND_MASK_PCM;
 		} else {
 			softpcmvol = 0;
-			for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+			for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 				if (control->enable == 0)
 					continue;
 				if ((control->widget->bindAssoc != mChannels[pcmDevice->playChanId].assocNum) &&
@@ -2237,7 +2237,7 @@ int VoodooHDADevice::audioCtlOssMixerSet(PcmDevice *pcmDevice, UInt32 dev, UInt3
 /*	if(dev == SOUND_MIXER_MIC)
 		mask |= SOUND_MASK_MONITOR;*/
 	// Recalculate all controls related to this OSS device.
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		UInt32 mute;
 		int lvol, rvol;
 		if ((control->enable == 0) || !(control->ossmask & mask))
@@ -2324,7 +2324,7 @@ int VoodooHDADevice::audioCtlOssMixerGet(PcmDevice *pcmDevice, UInt32 dev, UInt3
 	
 	
 	/* Recalculate all controls related to this OSS device. */
-	for (int i = 0; (control = audioCtlEach(funcGroup, &i)); ) {
+	for (int i = 0; (control = audioCtlEach(funcGroup, i)); i++) {
 		if ((control->enable == 0) || !(control->ossmask & mask))
 			continue;
 		if (!(((pcmDevice->playChanId >= 0) &&
@@ -3073,7 +3073,7 @@ void VoodooHDADevice::createPrefPanelStruct(FunctionGroup *funcGroup)
 		PcmDevice* curPCMDevice = 0;
 		char buf[255];
 		//Теперь ищем OSS устройства которые влияют на сигнал проходящий по всем нодам текущей ассоциации
-		for(int j = 0; (control = audioCtlEach(funcGroup, &j));) {
+		for(int j = 0; (control = audioCtlEach(funcGroup, j)); j++) {
 			if((control->enable == 0) || (control->widget->enable == 0))
 				continue;
 			
