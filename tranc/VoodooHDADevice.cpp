@@ -3079,9 +3079,9 @@ void VoodooHDADevice::createPrefPanelStruct(FunctionGroup *funcGroup)
 			
 			if(control->widget->bindAssoc == i) {
 				ossmask |= control->ossmask;
-				//Slice
-				/*if(control->ossmask && SOUND_MASK_MONITOR)
-					ossmask |= SOUND_MASK_MIC; */
+				//Slice - dangerous mode
+				if(control->ossmask & SOUND_MASK_MONITOR)
+					ossmask |= SOUND_MASK_MIC;
 				
 				//logMsg("createPrefPanelStruct:        audioControl %d ossmask = 0x%08lx\n", j, (long unsigned int)ossmask);
 				
