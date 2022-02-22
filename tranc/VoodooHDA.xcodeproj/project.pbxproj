@@ -235,10 +235,10 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_IDENTITY = "-";
-				CURRENT_PROJECT_VERSION = 2.9.8;
+				CURRENT_PROJECT_VERSION = 2.9.9;
 				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MODULE_NAME = org.voodoo.driver.VoodooHDA;
 				MODULE_VERSION = "$(CURRENT_PROJECT_VERSION)";
 				OTHER_CFLAGS = (
@@ -247,7 +247,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.voodoo.driver.${PRODUCT_NAME:identifier}";
 				PRODUCT_NAME = VoodooHDA;
-				SDKROOT = macosx10.13;
+				SDKROOT = macosx10.11;
 				STRIPFLAGS = "";
 				STRIP_STYLE = "non-global";
 				WARNING_CFLAGS = (
