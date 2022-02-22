@@ -637,9 +637,9 @@ void VoodooHDADevice::vendorPatchParse(FunctionGroup *funcGroup)
 				widget->enable = 0;
 				dumpMsg("VHDevice NID=27 disabled for IDT by user info.list\n");
 				continue;
-			} else if ((funcGroup->codec->vendorId == ANALOGDEVICES_VENDORID) &&  (i == 33)) {
+			} else if ((funcGroup->codec->vendorId == ANALOGDEVICES_VENDORID) &&  (i == 32)) {
 				widget->enable = 0;
-				dumpMsg("VHDevice NID=33 disabled for AD by user info.list\n");
+				dumpMsg("VHDevice NID=32 disabled for AD by user info.list\n");
 				continue;
 			}
 			/* else if ((funcGroup->codec->vendorId == VIA_VENDORID) &&  (i == 22)) {
