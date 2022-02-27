@@ -725,28 +725,28 @@ bool VoodooHDADevice::createAudioEngine(Channel *channel)
 	//logMsg("VoodooHDADevice[%p]::createAudioEngine\n", this);
 
 	audioEngine = new VoodooHDAEngine;
+  if (!audioEngine) return false;
 	if (!audioEngine->initWithChannel(channel)) {
 		errorMsg("error: VoodooHDAEngine::init failed\n");
-		goto done;
-	}
-	
-	// cue8chalk: set volume change fix on the engine
-	audioEngine->mEnableVolumeChangeFix = mEnableVolumeChangeFix;
+  } else {
+    
+    // cue8chalk: set volume change fix on the engine
+    audioEngine->mEnableVolumeChangeFix = mEnableVolumeChangeFix;
     // VertexBZ: set Mute fix on the engine
-	audioEngine->mEnableMuteFix = mEnableMuteFix;
-	
-//  audioEngine->mDisableInputMonitor = mDisableInputMonitor;
-	audioEngine->Boost = Boost;
-	// Active the audio engine - this will cause the audio engine to have start() and
-	// initHardware() called on it. After this function returns, that audio engine should
-	// be ready to begin vending audio services to the system.
-	if (activateAudioEngine(audioEngine) != kIOReturnSuccess) {
-		errorMsg("error: activateAudioEngine failed\n");
-		goto done;
-	}
+    audioEngine->mEnableMuteFix = mEnableMuteFix;
+    
+    //  audioEngine->mDisableInputMonitor = mDisableInputMonitor;
+    audioEngine->Boost = Boost;
+    // Active the audio engine - this will cause the audio engine to have start() and
+    // initHardware() called on it. After this function returns, that audio engine should
+    // be ready to begin vending audio services to the system.
+    if (activateAudioEngine(audioEngine) != kIOReturnSuccess) {
+      errorMsg("error: activateAudioEngine failed\n");
+    } else {
+      result = true;
+    }
+  }
 
-	result = true;
-done:
 	RELEASE(audioEngine);
 
 	return result;
@@ -755,24 +755,22 @@ done:
 IOReturn VoodooHDADevice::performPowerStateChange(IOAudioDevicePowerState oldPowerState,
 		IOAudioDevicePowerState newPowerState, __unused UInt32 *microsecondsUntilComplete)
 {
-	IOReturn result = kIOReturnError;
+	IOReturn result = kIOReturnSuccess;
 
 	//logMsg("VoodooHDADevice[%p]::performPowerStateChange(%d, %d)\n", this, oldPowerState, newPowerState);
 
 	if (oldPowerState == kIOAudioDeviceSleep) {
 		if (!resume()) {
 			errorMsg("error: resume action failed\n");
-			goto done;
+			result = kIOReturnError;
 		}
 	} else if (newPowerState == kIOAudioDeviceSleep) {
 		if (!suspend()) {
 			errorMsg("error: suspend action failed\n");
-			goto done;
+			result = kIOReturnError;
 		}
 	}
 
-	result = kIOReturnSuccess;
-done:
 	return result;
 }
 
@@ -1274,7 +1272,7 @@ IOReturn VoodooHDADevice::handleAction(OSObject *owner, void *arg0, void *arg1, 
 		return result;		
 		}
 
-	//Команда от моей версии getDump для обновления данных о усилении
+	//Команда от моей версии getDump для обновления данных об усилении
 	if((action & 0xFF)  == kVoodooHDAActionGetMixers) {
 
 		device->LOCK();
@@ -2290,7 +2288,6 @@ UInt32 VoodooHDADevice::audioCtlOssMixerSetRecSrc(PcmDevice *pcmDevice, UInt32 s
 	Channel *channel;
 	UInt32 ret = 0xffffffff;
 
-
 //		logMsg("VoodooHDADevice[%p]::audioCtlOssMixerSetRecSrc(%p, 0x%lx)\n", this, pcmDevice, src);
 
 	LOCK();
@@ -2583,14 +2580,16 @@ void VoodooHDADevice::streamSetup(Channel *channel)
 {
 	AudioAssoc *assoc = &channel->funcGroup->audio.assocs[channel->assocNum];
 	int totalchn;
+  int totalextchn;
 	nid_t cad = channel->funcGroup->codec->cad;
 	UInt16 format, digFormat;
 	const static
 	UInt16 chmap[2][5] = {{ 0x0010, 0x0001, 0x0201, 0x0321, 0x0321 }, /* 5.1 */
-			{ 0x0010, 0x0001, 0x2201, 0x3321, 0x4321 }};/* 7.1 */
+                        { 0x0010, 0x0001, 0x2201, 0x3321, 0x4321 }};/* 7.1 */
 	int map = -1;
 	
 	totalchn = AFMT_CHANNEL(channel->format);
+  totalextchn = AFMT_EXTCHANNEL(channel->format);
 	if (!totalchn) {
 		if (channel->format & (AFMT_STEREO | AFMT_AC3)) { //Slice - AC3 supports more then Stereo, but here we force 2
 			totalchn = 2;
@@ -2647,8 +2646,7 @@ void VoodooHDADevice::streamSetup(Channel *channel)
 			chn = 0;
 		} else {
 			if (map >= 0) /* Map known speaker setups. */
-				chn = (((chmap[map][totalchn / 2] >> i * 4) &
-						0xf) - 1) * 2;
+				chn = (((chmap[map][totalchn / 2] >> i * 4) & 0xf) - 1) * 2;
 			if (chn < 0 || chn >= totalchn) {
 				/* This is until OSS will support multichannel. Should be: c = 0; to disable unused DAC */
 				c = 0;
@@ -2673,19 +2671,20 @@ void VoodooHDADevice::streamSetup(Channel *channel)
 		if (HDA_PARAM_AUDIO_WIDGET_CAP_STRIPE(widget->params.widgetCap))
 			sendCommand(HDA_CMD_SET_STRIPE_CONTROL(cad, channel->io[i], channel->stripectl), cad);
 		cchn = HDA_PARAM_AUDIO_WIDGET_CAP_CC(widget->params.widgetCap);
-		if (cchn > 1) {
+		if (cchn > 1 && chn < totalchn) {
 			cchn = min(cchn, totalchn - chn - 1);
 			sendCommand(HDA_CMD_SET_CONV_CHAN_COUNT(cad, channel->io[i], cchn), cad);
 		}
 		if (HDA_PARAM_AUDIO_WIDGET_CAP_DIGITAL(widget->params.widgetCap))
-			streamHDMIorDPExtraSetup(channel->funcGroup, channel->io[i], assoc, cchn + 1);
+			streamHDMIorDPExtraSetup(channel, channel->io[i], assoc, totalchn, totalextchn);
 
 		chn += cchn + 1;
 	}
 }
 
-void VoodooHDADevice::streamHDMIorDPExtraSetup(FunctionGroup* funcGroup, nid_t dac, AudioAssoc *assoc, int hdmi_totalchn)
+void VoodooHDADevice::streamHDMIorDPExtraSetup(Channel *channel, nid_t dac, AudioAssoc *assoc, int totalchn, int totalext)
 {
+  FunctionGroup* funcGroup = channel->funcGroup;
 	UInt8 csum;
 	UInt16 AudioInfopacketBufferSize = 0xFFFFU;
 	nid_t cad = funcGroup->codec->cad;
@@ -2695,19 +2694,33 @@ void VoodooHDADevice::streamHDMIorDPExtraSetup(FunctionGroup* funcGroup, nid_t d
 	 * EIA-CEA 861-D speaker mappings (section 6.6.2)
 	 * ASP Channels 8-7-6-5-4-3-2-1
 	 */
-	const static
-	UInt8  hdmica[8] = {
-		0x00, /*  -   -   -  -  -  -  FR FL */
-		0x00, /*  -   -   -  -  -  -  FR FL */
-		0x04, /*  -   -   - RC  -  -  FR FL */
-		0x08, /*  -   -  RR RL  -  -  FR FL */
-		0x0A, /*  -   -  RR RL FC  -  FR FL */
-		0x0B, /*  -   -  RR RL FC LFE FR FL */
-		0x12, /* RRC RLC RR RL FC  -  FR FL */
-		0x13  /* RRC RLC RR RL FC LFE FR FL */
-	};
-	const static
-	UInt32 hdmich[8] = { 0xFFFFFF00, 0xFFFFFF10, 0xFFF2FF10, 0xFF32FF10, 0xFF432F10, 0xFF542310, 0x65432F10, 0x76542310 };
+//	const static
+//	UInt8  hdmica[8] = {
+//		0x00, /*  -   -   -  -  -  -  FR FL */
+//		0x00, /*  -   -   -  -  -  -  FR FL */
+//		0x04, /*  -   -   - RC  -  -  FR FL */
+//		0x08, /*  -   -  RR RL  -  -  FR FL */
+//		0x0A, /*  -   -  RR RL FC  -  FR FL */
+//		0x0B, /*  -   -  RR RL FC LFE FR FL */
+//		0x12, /* RRC RLC RR RL FC  -  FR FL */
+//		0x13  /* RRC RLC RR RL FC LFE FR FL */
+//	};
+//	const static
+//	UInt32 hdmich[8] = { 0xFFFFFF00, 0xFFFFFF10, 0xFFF2FF10, 0xFF32FF10, 0xFF432F10, 0xFF542310, 0x65432F10, 0x76542310 };
+  
+  /* Mapping formats to HDMI channel allocations. */
+  const static UInt8 hdmica[2][8] =
+  /*  1     2     3     4     5     6     7     8  */
+  {{ 0x02, 0x00, 0x04, 0x08, 0x0a, 0x0e, 0x12, 0x12 }, /* x.0 */
+   { 0x01, 0x03, 0x01, 0x03, 0x09, 0x0b, 0x0f, 0x13 }}; /* x.1 */
+  /* Mapping formats to HDMI channels order. */
+  const static UInt32 hdmich[2][8] =
+  /*  1  /  5     2  /  6     3  /  7     4  /  8  */
+  {{ 0xFFFF0F00, 0xFFFFFF10, 0xFFF2FF10, 0xFF32FF10,
+     0xFF324F10, 0xF5324F10, 0x54326F10, 0x54326F10 }, /* x.0 */
+   { 0xFFFFF000, 0xFFFF0100, 0xFFFFF210, 0xFFFF2310,
+     0xFF32F410, 0xFF324510, 0xF6324510, 0x76325410 }}; /* x.1 */
+
 
 	for (int j = 0; j < 16; j++) {
 		if (assoc->dacs[j] != dac)
@@ -2731,7 +2744,7 @@ void VoodooHDADevice::streamHDMIorDPExtraSetup(FunctionGroup* funcGroup, nid_t d
 		/* Set channel mapping. */
 		for (int k = 0; k < 8; k++)
 			sendCommand(HDA_CMD_SET_HDMI_CHAN_SLOT(cad, nid_pin,
-												   (((hdmich[hdmi_totalchn - 1] >> (k * 4)) & 0xf) << 4) | k), cad);
+												   (((hdmich[totalext == 0 ? 0 : 1][totalchn - 1]>> (k * 4)) & 0xf) << 4) | k), cad);
 
 		/*
 		 * Note on HBR (High Bit Rate)
@@ -2740,6 +2753,18 @@ void VoodooHDADevice::streamHDMIorDPExtraSetup(FunctionGroup* funcGroup, nid_t d
 		 *   At present, VoodooHDA supportes AFMT_AC3 with
 		 *     frame rates 32 - 48 KHz, 16 bits/sample, 2 channels.  So HBR is not needed.
 		 */
+    /*
+     * Enable High Bit Rate (HBR) Encoded Packet Type
+     * (EPT), if supported and needed (8ch data).
+     */
+    if (HDA_PARAM_PIN_CAP_HDMI(widget_pin->pin.cap) &&
+        HDA_PARAM_PIN_CAP_HBR(widget_pin->pin.cap)) {
+      widget_pin->pin.ctrl &= ~HDA_CMD_SET_PIN_WIDGET_CTRL_VREF_ENABLE_MASK;
+      if ((channel->format & AFMT_AC3) && (totalchn == 8))
+        widget_pin->pin.ctrl |= 0x03;
+      sendCommand(HDA_CMD_SET_PIN_WIDGET_CTRL(cad, nid_pin, widget_pin->pin.ctrl), cad);
+    }
+
 
 		/*
 		 * Find size of Audio Infoframe buffer to see if it can be used.
@@ -2772,27 +2797,38 @@ void VoodooHDADevice::streamHDMIorDPExtraSetup(FunctionGroup* funcGroup, nid_t d
 		/*
 		 * Need Valid ELD to tell between DP or HDMI
 		 */
+    if (mVerbose > 1) {
+      logMsg("EldLen=%d\n", widget_pin->eld_len);
+    }
 #if DP_AUDIO
-		if (eld != NULL && eld_len >= 6 && ((eld[5] >> 2) & 0x3) == 1) { /* DisplayPort */
+		if (widget_pin->eld != NULL && widget_pin->eld_len >= 6 && ((widget_pin->eld[5] >> 2) & 0x3) == 1) { /* DisplayPort */
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x84), cad);
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x1b), cad);
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x44), cad);
+      if (mVerbose > 0) {
+        logMsg("DP Audio\n");
+      }
+
 		} else {
 #endif
       /* HDMI */
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x84), cad);
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x01), cad);
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x0a), cad);
+      if (mVerbose > 0) {
+        logMsg("HDMI Audio\n");
+      }
+
 			csum = 0;
-			csum -= 0x84 + 0x01 + 0x0a + (hdmi_totalchn - 1) + hdmica[hdmi_totalchn - 1];
+			csum -= 0x84 + 0x01 + 0x0a + (totalchn - 1) + hdmica[totalext == 0 ? 0 : 1][totalchn - 1];
 			sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, csum), cad);
 #if DP_AUDIO
 		}
 #endif
-		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, hdmi_totalchn - 1), cad);
+		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, totalchn - 1), cad);
 		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x00), cad);
 		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, 0x00), cad);
-		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, hdmica[hdmi_totalchn - 1]), cad);
+		sendCommand(HDA_CMD_SET_HDMI_DIP_DATA(cad, nid_pin, hdmica[totalext == 0 ? 0 : 1][totalchn - 1]), cad);
 
 		/* Start audio infoframe transmission. */
 		sendCommand(HDA_CMD_SET_HDMI_DIP_INDEX(cad, nid_pin, 0x00), cad);

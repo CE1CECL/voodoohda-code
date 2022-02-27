@@ -27,6 +27,25 @@ const char * const gConnTypes[4] = { "Jack", "None", "Fixed", "Both" };
 const char * const gJacks[16] = {"Unknown", "1/8", "1/4", "ATAPI", "RCA", "Optic", "Digital", "Analog",
 	"Multi", "XLR", "RJ-11", "Combo", "Res.F", "Res.G", "Res.H", "Other"};
 
+const char *HDA_LOCS[64] = {
+  "0x00", "Rear", "Front", "Left", "Right", "Top", "Bottom", "Rear-panel",
+  "Drive-bay", "0x09", "0x0a", "0x0b", "0x0c", "0x0d", "0x0e", "0x0f",
+  "Internal", "0x11", "0x12", "0x13", "0x14", "0x15", "0x16", "Riser",
+  "0x18", "Onboard", "0x1a", "0x1b", "0x1c", "0x1d", "0x1e", "0x1f",
+  "External", "Ext-Rear", "Ext-Front", "Ext-Left", "Ext-Right", "Ext-Top", "Ext-Bottom", "0x07",
+  "0x28", "0x29", "0x2a", "0x2b", "0x2c", "0x2d", "0x2e", "0x2f",
+  "Other", "0x31", "0x32", "0x33", "0x34", "0x35", "Other-Bott", "Lid-In",
+  "Lid-Out", "0x39", "0x3a", "0x3b", "0x3c", "0x3d", "0x3e", "0x3f" };
+
+const char *HDA_GPIO_ACTIONS[8] = {
+  "keep", "set", "clear", "disable", "input", "0x05", "0x06", "0x07"};
+
+const char *HDA_HDMI_CODING_TYPES[18] = {
+  "undefined", "LPCM", "AC-3", "MPEG1", "MP3", "MPEG2", "AAC-LC", "DTS",
+  "ATRAC", "DSD", "E-AC-3", "DTS-HD", "MLP", "DST", "WMAPro", "HE-AAC",
+  "HE-AACv2", "MPEG-Surround"
+};
+
 const UInt32 gAFMT[] = { AFMT_STEREO | AFMT_S16_LE, 0 };
 const ChannelCaps gDefaultChanCaps = { 48000, 48000, &gAFMT[0], 0, 2};
 
@@ -4617,6 +4636,11 @@ void VoodooHDADevice::switchInit(FunctionGroup *funcGroup)
 			assocs[widget->bindAssoc].activeNid = j;
 	 //	SwitchHandlerRename(funcGroup, widget->bindAssoc, j, res);
 		}*/
+    if (!HDA_PARAM_PIN_CAP_DP(widget->pin.cap) &&
+        !HDA_PARAM_PIN_CAP_HDMI(widget->pin.cap))
+      continue;
+    hdaa_eld_handler(widget);
+
 	}
 	funcGroup->mSwitchEnable = enable;
 /*	if (enable) {
@@ -4625,6 +4649,52 @@ void VoodooHDADevice::switchInit(FunctionGroup *funcGroup)
 		if (poll)
 			errorMsg("XXX\nXXX: poll based jack detection unimplemented\nXXX\n");
 	}*/
+}
+
+void VoodooHDADevice::hdaa_eld_handler(Widget *widget)
+{
+  uint32_t res;
+  int cad = widget->funcGroup->codec->cad;
+  if (!widget || (widget->enable == 0))
+    return;
+  if ((widget->type != HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_PIN_COMPLEX))
+    return;
+  if (HDA_PARAM_PIN_CAP_PRESENCE_DETECT_CAP(widget->pin.cap) == 0 ||
+      (HDA_CONFIG_DEFAULTCONF_MISC(widget->pin.config) & 1) != 0)
+    return;
+  res = sendCommand(HDA_CMD_GET_PIN_SENSE(cad, widget->nid), cad);
+  if ((widget->eld != 0) == ((res & HDA_CMD_GET_PIN_SENSE_ELD_VALID) != 0))
+    return;
+  if (widget->eld != NULL) {
+    widget->eld_len = 0;
+    freeMem(widget->eld);
+    widget->eld = NULL;
+  }
+  if ((res & HDA_CMD_GET_PIN_SENSE_ELD_VALID) == 0)
+    return;
+  res = sendCommand(HDA_CMD_GET_HDMI_DIP_SIZE(cad, widget->nid, 0x08), cad);
+  if (res == HDA_INVALID)
+    return;
+  widget->eld_len = res & 0xff;
+  if (widget->eld_len != 0)
+    widget->eld = (uint8_t*)allocMem(widget->eld_len);
+  if (widget->eld == NULL) {
+    widget->eld_len = 0;
+    return;
+  }
+  
+  for (int i = 0; i < widget->eld_len; i++) {
+    res = sendCommand(HDA_CMD_GET_HDMI_ELDD(cad, widget->nid, i), cad);
+    if (res & 0x80000000)
+      widget->eld[i] = res & 0xff;
+  }
+  if (mVerbose > 0) {
+    logMsg("dump eld for nid=%d:\n", widget->nid);
+    for (int i = 0; i < widget->eld_len; i++) {
+      logMsg("  eld[%d]=0x%02x\n", i, widget->eld[i]);
+    }
+  }
+//hdaa_channels_handler(&funcGroup->audio.assocs[widget->bindAssoc]); //там только дамп коннекторов
 }
 
 //Slice

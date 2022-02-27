@@ -355,7 +355,7 @@ public:
 	int channelGetPosition(Channel *channel);
 
 	void streamSetup(Channel *channel);
-	void streamHDMIorDPExtraSetup(FunctionGroup*, nid_t, AudioAssoc*, int);
+	void streamHDMIorDPExtraSetup(Channel *channel, nid_t, AudioAssoc*, int, int);
 	void streamStop(Channel *channel);
 	void streamStart(Channel *channel);
 	void streamReset(Channel *channel);
@@ -378,6 +378,7 @@ public:
 	void lockPrefPanelMemoryBuf();
 	void unlockPrefPanelMemoryBuf();
 	
+  void hdaa_eld_handler(Widget *widget);
 	void catPinName(Widget *widget); //UInt32 config, char *buf, size_t size);
 	
 	void changeSliderValue(UInt8 tabNum, UInt8 sliderNum, UInt8 newValue);

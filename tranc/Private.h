@@ -53,6 +53,10 @@
 #define HDA_BUFSZ_MAX			262144
 #define HDA_BUFSZ_DEFAULT		HDA_BUFSZ_MAX
 
+#define HDA_GPIO_MAX    8
+#define HDA_MATCH_ALL    0xffffffff
+#define HDA_INVALID    0xffffffff
+
 #define HDA_PARSE_MAXDEPTH		10
 
 #define HDAC_UNSOLTAG_EVENT_HP	0x00
@@ -171,6 +175,8 @@ typedef struct _Widget {
 	nid_t conns[HDA_MAX_CONNS];
 	UInt8 connsenable[HDA_MAX_CONNS];
 	char name[HDA_MAX_NAMELEN];
+  uint8_t  *eld;
+  int  eld_len;
 	FunctionGroup *funcGroup;
 	UInt8 traceDir; 
 	UInt8 stripecap;
