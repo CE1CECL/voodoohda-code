@@ -23,8 +23,8 @@
 
 #define HDAC_REVISION "20120126_0002"
 
-#define LOCK()		lock(__FUNCTION__)
-#define UNLOCK()	unlock(__FUNCTION__)
+#define LOCK()	//	lock(__FUNCTION__)
+#define UNLOCK()	//unlock(__FUNCTION__)
 
 #define super IOAudioDevice
 OSDefineMetaClassAndStructors(VoodooHDADevice, IOAudioDevice)
@@ -1275,9 +1275,9 @@ IOReturn VoodooHDADevice::handleAction(OSObject *owner, void *arg0, void *arg1, 
 	//Команда от моей версии getDump для обновления данных об усилении
 	if((action & 0xFF)  == kVoodooHDAActionGetMixers) {
 
-		device->LOCK();
+//		device->LOCK();
 		device->updateExtDump();
-		device->UNLOCK();
+//		device->UNLOCK();
 
 		*outSize = 0;
 		*outData = NULL;
